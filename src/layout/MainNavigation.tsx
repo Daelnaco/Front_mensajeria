@@ -5,13 +5,17 @@ import { MessageSquare, AlertCircle } from 'lucide-react';
 import { MessagingAndDisputes } from '../views/MessagingAndDisputes';
 import { DisputeCenter } from '../views/DisputeCenter';
 import { motion } from 'motion/react';
+import { useMessages } from '../hooks/useMessages';
+import { useDisputes } from '../hooks/useDisputes';
 
 export function MainNavigation() {
   const [activeTab, setActiveTab] = useState('messages');
   
-  // Mock notification counts
-  const messageCount = 5;
-  const disputeCount = 2;
+  // Use hooks for automatic counts
+  const { messages } = useMessages(null);
+  const messageCount = messages.filter(message => !message?.read).length;
+  const { disputes } = useDisputes();
+  const disputeCount = disputes.length;
 
   return (
     <div className="h-screen bg-background">

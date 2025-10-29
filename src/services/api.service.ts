@@ -100,4 +100,28 @@ class ApiService {
   }
 }
 
-export const apiService = new ApiService();
+const BASE_URL = 'http://localhost:3000/api'; // Ajusta esta URL según tu backend
+
+export const apiService = {
+  async get(endpoint: string) {
+    try {
+      const response = await fetch(`${BASE_URL}${endpoint}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          // Agrega headers de autenticación si son necesarios
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      return []; // Retorna un array vacío en caso de error
+    }
+  },
+};
+
+const apiServiceInstance = new ApiService();
