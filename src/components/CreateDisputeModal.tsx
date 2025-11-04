@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
 import { Card, CardContent } from '../components/ui/card';
 import { AlertTriangle, Upload, X, Package, DollarSign } from 'lucide-react';
+import { toast } from 'sonner'; // <-- Importado el toast
 
 interface CreateDisputeModalProps {
   open: boolean;
@@ -102,11 +103,21 @@ export function CreateDisputeModal({ open, onOpenChange }: CreateDisputeModalPro
       setEvidenceFiles([]);
       onOpenChange(false);
 
-      // Show success message (you might want to use a toast here)
-      alert('Disputa creada exitosamente. Te notificaremos sobre el progreso.');
+      // --- CAMBIO AQUÍ ---
+      // Reemplazamos el alert() nativo por un toast.success
+      toast.success('Disputa creada exitosamente', {
+        description: 'Te notificaremos sobre el progreso.',
+      });
+
     } catch (error) {
       console.error('Error creating dispute:', error);
-      alert('Error al crear la disputa. Por favor intenta nuevamente.');
+      
+      // --- CAMBIO AQUÍ ---
+      // Reemplazamos el alert() nativo por un toast.error
+      toast.error('Error al crear la disputa', {
+        description: 'Por favor intenta nuevamente más tarde.',
+      });
+
     } finally {
       setIsSubmitting(false);
     }
