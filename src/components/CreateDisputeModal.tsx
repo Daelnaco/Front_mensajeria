@@ -1,4 +1,5 @@
-import { useState } from 'react';
+// <-- CAMBIO: Importamos useEffect
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -6,12 +7,15 @@ import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
 import { Card, CardContent } from '../components/ui/card';
-import { AlertTriangle, Upload, X, Package, DollarSign } from 'lucide-react';
-import { toast } from 'sonner'; // <-- Importado el toast
+// <-- CAMBIO: Importamos 'Loader2' para el spinner de carga
+import { AlertTriangle, Upload, X, Package, DollarSign, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface CreateDisputeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // <-- CAMBIO (Opcional): Podrías necesitar el ID del usuario
+  // userId: string; 
 }
 
 interface OrderInfo {
@@ -19,11 +23,10 @@ interface OrderInfo {
   productName: string;
   seller: string;
   amount: number;
-  orderDate: Date;
+  orderDate: Date; // Asegúrate que la API devuelva un string de fecha (ej. ISO)
   image: string;
 }
 
-// Mock data
 const disputeReasons = [
   { value: 'not_received', label: 'No recibí el producto' },
   { value: 'damaged_product', label: 'Producto dañado' },
@@ -32,50 +35,80 @@ const disputeReasons = [
   { value: 'other', label: 'Otro motivo' },
 ];
 
-// Mock orders - in real app this would come from API
-const mockOrders: OrderInfo[] = [
-  {
-    orderId: 'ORD123456',
-    productName: 'Smartphone Samsung Galaxy A54',
-    seller: 'TechStore',
-    amount: 299.99,
-    orderDate: new Date('2024-12-01'),
-    image: 'https://images.unsplash.com/photo-1592286846671-b0b7f8b21aef?w=400&h=400&fit=crop&crop=center',
-  },
-  {
-    orderId: 'ORD789012',
-    productName: 'Auriculares Bluetooth Sony',
-    seller: 'AudioWorld',
-    amount: 89.99,
-    orderDate: new Date('2024-12-05'),
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop&crop=center',
-  },
-  {
-    orderId: 'ORD345678',
-    productName: 'Reloj Inteligente Apple Watch',
-    seller: 'ElectroShop',
-    amount: 399.99,
-    orderDate: new Date('2024-12-08'),
-    image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&h=400&fit=crop&crop=center',
-  },
-];
-
 export function CreateDisputeModal({ open, onOpenChange }: CreateDisputeModalProps) {
+  // Estados para los pedidos
+  const [orders, setOrders] = useState<OrderInfo[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [errorLoadingOrders, setErrorLoadingOrders] = useState<string | null>(null);
+
+  // Estados del formulario
   const [selectedOrderId, setSelectedOrderId] = useState('');
   const [reason, setReason] = useState('');
   const [description, setDescription] = useState('');
-  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]); // <-- Estado para archivos (ya estaba)
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const selectedOrder = mockOrders.find(order => order.orderId === selectedOrderId);
+  const selectedOrder = orders.find(order => order.orderId === selectedOrderId);
 
+  // Hook para cargar los pedidos
+  useEffect(() => {
+    if (open && orders.length === 0) {
+      const fetchUserOrders = async () => {
+        setIsLoadingOrders(true);
+        setErrorLoadingOrders(null);
+        try {
+          // --- ¡DEBES CAMBIAR ESTA LÍNEA! ---
+          // Apunta a tu servidor backend (ej. http://localhost:4000)
+          const response = await fetch('http://localhost:4000/api/v1/user/orders'); 
+          
+          if (!response.ok) {
+            throw new Error('No se pudieron cargar los pedidos.');
+          }
+
+          const data: OrderInfo[] = await response.json();
+          const formattedData = data.map(order => ({
+            ...order,
+            orderDate: new Date(order.orderDate)
+          }));
+
+          setOrders(formattedData);
+
+        } catch (error) {
+          console.error('Error fetching orders:', error);
+          setErrorLoadingOrders('Hubo un error al cargar tus pedidos.');
+          toast.error('Error al cargar pedidos', { description: 'Por favor, intenta cerrar y abrir el modal de nuevo.' });
+        } finally {
+          setIsLoadingOrders(false);
+        }
+      };
+
+      fetchUserOrders();
+    }
+  }, [open, orders.length]);
+
+  // <-- FUNCIÓN PARA MANEJAR ARCHIVOS (ya estaba) -->
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     setEvidenceFiles(prev => [...prev, ...files]);
   };
 
+  // <-- FUNCIÓN PARA QUITAR ARCHIVOS (ya estaba) -->
   const removeFile = (index: number) => {
     setEvidenceFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Función para resetear el estado al cerrar
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      // Resetea el formulario y los pedidos al cerrar
+      setSelectedOrderId('');
+      setReason('');
+      setDescription('');
+      setEvidenceFiles([]); // <-- Resetea archivos
+      setOrders([]); 
+      setErrorLoadingOrders(null);
+    }
+    onOpenChange(isOpen);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,41 +116,24 @@ export function CreateDisputeModal({ open, onOpenChange }: CreateDisputeModalPro
     if (!selectedOrderId || !reason || !description.trim()) return;
 
     setIsSubmitting(true);
-
     try {
-      // Simulate API call
+      // Simula la llamada API
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Here you would typically send the dispute data to your backend
+      // Aquí enviarías los datos, incluyendo los archivos
       console.log('Dispute created:', {
         orderId: selectedOrderId,
         reason,
         description,
-        evidence: evidenceFiles,
+        evidence: evidenceFiles, // <-- Se incluyen los archivos
       });
-
-      // Reset form
-      setSelectedOrderId('');
-      setReason('');
-      setDescription('');
-      setEvidenceFiles([]);
-      onOpenChange(false);
-
-      // --- CAMBIO AQUÍ ---
-      // Reemplazamos el alert() nativo por un toast.success
-      toast.success('Disputa creada exitosamente', {
-        description: 'Te notificaremos sobre el progreso.',
-      });
+      
+      handleOpenChange(false);
+      toast.success('Disputa creada exitosamente');
 
     } catch (error) {
       console.error('Error creating dispute:', error);
-      
-      // --- CAMBIO AQUÍ ---
-      // Reemplazamos el alert() nativo por un toast.error
-      toast.error('Error al crear la disputa', {
-        description: 'Por favor intenta nuevamente más tarde.',
-      });
-
+      toast.error('Error al crear la disputa');
     } finally {
       setIsSubmitting(false);
     }
@@ -126,7 +142,7 @@ export function CreateDisputeModal({ open, onOpenChange }: CreateDisputeModalPro
   const isFormValid = selectedOrderId && reason && description.trim().length >= 20;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>      
+    <Dialog open={open} onOpenChange={handleOpenChange}>      
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -142,30 +158,49 @@ export function CreateDisputeModal({ open, onOpenChange }: CreateDisputeModalPro
           {/* Step 1: Select Order */}
           <div className="space-y-3">
             <Label htmlFor="order">1. Selecciona tu pedido *</Label>
-            <Select value={selectedOrderId} onValueChange={setSelectedOrderId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona el pedido para el cual quieres crear una disputa" />
-              </SelectTrigger>
-              <SelectContent>
-                {mockOrders.map((order) => (
-                  <SelectItem key={order.orderId} value={order.orderId}>
-                    <div className="flex items-center gap-3 py-2">
-                      <img
-                        src={order.image}
-                        alt={order.productName}
-                        className="w-10 h-10 rounded object-cover"
-                      />
-                      <div>
-                        <p>{order.productName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Orden: {order.orderId} • ${order.amount.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            
+            {/* Lógica de carga del Select */}
+            {isLoadingOrders ? (
+              <div className="flex items-center justify-center h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Cargando tus pedidos...
+              </div>
+            ) : errorLoadingOrders ? (
+              <div className="flex items-center justify-center h-10 w-full rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {errorLoadingOrders}
+              </div>
+            ) : (
+              <Select value={selectedOrderId} onValueChange={setSelectedOrderId} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona el pedido para el cual quieres crear una disputa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orders.length === 0 ? (
+                    <SelectItem value="no-orders" disabled>
+                      No se encontraron pedidos elegibles para disputa.
+                    </SelectItem>
+                  ) : (
+                    orders.map((order) => (
+                      <SelectItem key={order.orderId} value={order.orderId}>
+                        <div className="flex items-center gap-3 py-2">
+                          <img
+                            src={order.image}
+                            alt={order.productName}
+                            className="w-10 h-10 rounded object-cover"
+                          />
+                          <div>
+                            <p>{order.productName}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Orden: {order.orderId} • ${order.amount.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            )}
 
             {/* Order Summary */}
             {selectedOrder && (
@@ -229,7 +264,7 @@ export function CreateDisputeModal({ open, onOpenChange }: CreateDisputeModalPro
             </p>
           </div>
 
-          {/* Step 4: Evidence */}
+          {/* <-- SECCIÓN DE EVIDENCIAS REINTEGRADA --> */}
           <div className="space-y-3">
             <Label>4. Evidencias (opcional pero recomendado)</Label>
             <div className="space-y-3">
@@ -289,7 +324,7 @@ export function CreateDisputeModal({ open, onOpenChange }: CreateDisputeModalPro
             </div>
           </div>
 
-          {/* Important Notes */}
+          {/* <-- SECCIÓN DE NOTAS REINTEGRADA --> */}
           <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg space-y-2">
             <h5 className="text-orange-800 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
@@ -308,7 +343,7 @@ export function CreateDisputeModal({ open, onOpenChange }: CreateDisputeModalPro
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
               className="flex-1"
               disabled={isSubmitting}
             >

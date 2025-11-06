@@ -11,27 +11,42 @@ import { useDisputes } from '../hooks/useDisputes';
 export function MainNavigation() {
   const [activeTab, setActiveTab] = useState('messages');
   
-  // Use hooks for automatic counts
+  // Hooks para los contadores
   const { messages } = useMessages(null);
-  const messageCount = messages.filter(message => !message?.read).length;
+  const messageCount = messages.filter(message => !message.read).length;
   const { disputes } = useDisputes();
   const disputeCount = disputes.length;
 
   return (
     <div className="h-screen bg-background">
+      {/* Cabecera con el logo y el título */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="border-b border-border bg-card/50 backdrop-blur-sm"
       >
         <div className="px-6 py-4">
-          <h1 className="text-green-700">Sistema de Mensajería y Disputas</h1>
-          <p className="text-sm text-muted-foreground">
-            Gestiona tu comunicación y resuelve disputas de manera eficiente
-          </p>
+        
+          {/* --- MODIFICACIÓN PARA EL LOGO --- */}
+          <div className="flex items-center gap-3"> 
+            <img 
+              src="/logo.jpg" // <-- Ruta a tu logo en la carpeta /public
+              alt="Logo de la Empresa" 
+              className="h-9 w-9" // <-- Ajusta el tamaño aquí
+            />
+            <div>
+              <h1 className="text-green-700">Sistema de Mensajería y Disputas</h1>
+              <p className="text-sm text-muted-foreground">
+                Gestiona tu comunicación y resuelve disputas de manera eficiente
+              </p>
+            </div>
+          </div>
+          {/* --- FIN DE LA MODIFICACIÓN --- */}
+
         </div>
       </motion.div>
 
+      {/* Navegación por Pestañas (Tabs) */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="h-[calc(100vh-120px)]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -40,6 +55,7 @@ export function MainNavigation() {
           className="px-6 pt-4"
         >
           <TabsList className="grid w-full grid-cols-2 bg-muted/50">
+            {/* Pestaña Mensajes */}
             <TabsTrigger value="messages" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               Mensajes
@@ -49,6 +65,8 @@ export function MainNavigation() {
                 </Badge>
               )}
             </TabsTrigger>
+            
+            {/* Pestaña Disputas */}
             <TabsTrigger value="disputes" className="flex items-center gap-2">
               <AlertCircle className="h-4 w-4" />
               Disputas
@@ -61,6 +79,7 @@ export function MainNavigation() {
           </TabsList>
         </motion.div>
 
+        {/* Contenido de las Pestañas */}
         <div className="px-6 pt-4 h-[calc(100%-80px)]">
           <TabsContent value="messages" className="h-full mt-0">
             <MessagingAndDisputes />

@@ -2,7 +2,7 @@
   # FrontEnd: Mensajeria y Disputas
 
   ## Integrantes que trabajaron en el frontend:
-    - Daian Navarro.
+    - Damian Navarro.
     - Alex Rodriguez.
 
     
