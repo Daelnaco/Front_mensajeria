@@ -100,7 +100,7 @@ class ApiService {
   }
 }
 
-const BASE_URL = 'http://localhost:3000/api'; // Ajusta esta URL según tu backend
+const BASE_URL = 'http://localhost:9000/api'; // Ajusta esta URL según tu backend
 
 export const apiService = {
   async get(endpoint: string) {

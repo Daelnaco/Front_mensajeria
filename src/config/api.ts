@@ -3,7 +3,7 @@
 // ==========================================
 
 // Base API URL - Configure in .env
-export const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://localhost:3000/api';
+export const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://localhost:9000/api';
 
 // API Endpoints
 export const API_ENDPOINTS = {
